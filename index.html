@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>RTW Digital Catalogue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img class="brand-logo" src="logo.svg" alt="Valentino" />
+        <p class="subtitle">RTW Digital Catalogue</p>
+      </div>
+
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <div class="segmented" id="genderFilter" role="tablist">
+        <button class="seg active" data-gender="all">All</button>
+        <button class="seg" data-gender="men">Men</button>
+        <button class="seg" data-gender="women">Women</button>
+      </div>
+      <select id="categoryFilter" class="select"><option value="">All categories</option></select>
+    </div>
+  </div>
+
+  <main class="content">
+    <div class="results-info" id="resultsInfo"></div>
+    <div class="grid" id="grid"></div>
+    <div id="sentinel" class="sentinel"></div>
+    <div class="empty" id="empty" hidden>No products match the selected filters.</div>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" id="lbClose" aria-label="Close">&times;</button>
+    <div class="lb-content">
+      <div class="lb-gallery">
+        <div class="lb-main">
+          <button class="lb-nav lb-prev" id="lbPrev" aria-label="Previous">&#8249;</button>
+          <img id="lbImg" alt="" />
+          <button class="lb-nav lb-next" id="lbNext" aria-label="Next">&#8250;</button>
+        </div>
+        <div class="lb-thumbs" id="lbThumbs"></div>
+      </div>
+      <div class="lb-info" id="lbInfo"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>Confidential internal catalogue</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
