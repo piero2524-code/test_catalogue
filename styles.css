@@ -195,17 +195,21 @@ a{color:inherit;text-decoration:none;}
 
 /* Card */
 .card{background:#fff;cursor:pointer;display:flex;flex-direction:column;}
+/* Altezza del box definita dal PADDING percentuale (104/83 del lato): non dipende
+   dall'immagine ne' dal supporto ad aspect-ratio -> tutte le celle SEMPRE uguali,
+   su qualsiasi browser/telefono. La foto sta in overlay assoluto con object-fit:contain,
+   quindi resta intera (nessun ritaglio, nessuna modifica alle foto). */
 .card-img{
-  position:relative;width:100%;aspect-ratio:83/104;background:var(--img-bg);
-  overflow:hidden;display:flex;align-items:center;justify-content:center;
+  position:relative;width:100%;height:0;padding-bottom:calc(104 / 83 * 100%);
+  background:var(--img-bg);overflow:hidden;
 }
-/* Foto in overlay assoluto: l'altezza del box viene SEMPRE dall'aspect-ratio,
-   mai dall'immagine (evita celle sfalsate su alcuni browser mobile).
-   object-fit:contain -> nessun ritaglio, foto invariate. */
 .card-img img{
   position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
 }
-.card-img .noimg{color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.card-img .noimg{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:center;
+}
 .badge{
   position:absolute;top:8px;left:8px;background:#fff;border:1px solid var(--line);
   font-size:9px;letter-spacing:1px;padding:3px 6px;text-transform:uppercase;color:var(--muted);
