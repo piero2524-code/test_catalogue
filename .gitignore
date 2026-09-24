@@ -11,3 +11,5 @@ desktop.ini
 # Python (script di build, tenuti fuori dal repo)
 __pycache__/
 *.pyc
+.vercel
+.env*

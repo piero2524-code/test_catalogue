@@ -14,12 +14,14 @@ né ubicazione dei pezzi.
 
 ```
 rtw-digital-catalogue/
-├─ index.html      # markup della pagina (header, toolbar filtri, griglia, lightbox)
-├─ styles.css      # stili
-├─ app.js          # logica: filtri, rendering incrementale, lightbox/galleria
+├─ index.html      # markup della pagina (header, toolbar filtri, drawer, griglia, lightbox)
+├─ styles.css      # stili (restyle: DINPro + Times New Roman corsivo per il titolo editoriale)
+├─ app.js          # logica: filtri, drawer, rendering incrementale, lightbox/galleria
 ├─ data.js         # catalogo prodotti (window.CATALOG) — generato
-├─ logo.svg        # logo Valentino
-├─ fonts/          # DINPro-Medium.ttf
+├─ v-logo.svg      # logo Valentino (monogramma "V") — usato anche come favicon
+├─ v-favicon.png   # favicon PNG di fallback
+├─ logo.svg        # vecchio logo wordmark (non più referenziato, mantenuto per storico)
+├─ fonts/          # DINPro-Regular.ttf + DINPro-Medium.ttf
 └─ images/         # foto di fallback per i prodotti senza media sul DAM
    ├─ men/
    └─ women/
@@ -31,15 +33,36 @@ ha campi come `gender`, `category`, `sku`, `color`, `img` e `gallery`.
 
 ## Funzionalità
 
-- Griglia responsive dei prodotti (prima Donna, poi Uomo).
-- Filtro **Men / Women / All** e filtro per **categoria** (le categorie si aggiornano in
-  base al genere selezionato).
-- **Lightbox** con galleria di scatti per prodotto (frontale come immagine principale),
-  navigazione con frecce/tastiera e miniature.
-- Rendering incrementale con **infinite scroll** e **lazy-loading** delle immagini
-  (fluido anche con oltre mille prodotti).
-- Lista di esclusione interna (`EXCLUDE` in `app.js`) e filtro automatico dei prodotti
-  senza immagine.
+- Header minimale con il **monogramma "V"** centrato e titolo editoriale
+  *Ready-to-Wear Digital Catalogue* (Times New Roman corsivo).
+- **Toolbar sticky che si compatta allo scroll**: il titolo scompare, restano i filtri.
+- Filtro genere **All / Woman / Man** (in quest'ordine).
+- **Drawer laterale "Filter by"** (scorre da destra) con sezione **Category** e sezione
+  **Sizes** (entrambe **funzionanti**), e logica **Clear / Apply**. Le taglie mostrate si
+  aggiornano in base al **genere** e alla **categoria** selezionata: es. scegliendo *Gowns*
+  compaiono solo le taglie realmente disponibili per quella categoria (36–52), non tutte.
+  Selezionando una o più taglie si filtrano i prodotti che ne hanno **almeno una**
+  disponibile; le taglie deselezionate automaticamente se non più valide dopo un cambio
+  categoria.
+- Griglia prodotti responsive con immagini **edge-to-edge** (5 colonne desktop, 2 mobile)
+  e ratio adattato agli scatti e-commerce.
+- **Lightbox** con galleria di scatti (frontale come immagine principale), navigazione con
+  frecce, tastiera, miniature e **swipe** su touch; mostra anche le *Available sizes* reali.
+- Rendering incrementale con **infinite scroll** e **lazy-loading** delle immagini.
+- Filtro automatico dei prodotti senza immagine (la lista `EXCLUDE` in `app.js` è al
+  momento vuota: il catalogo è stato rigenerato da zero).
+
+## Taglie disponibili (available sizes)
+
+Ogni prodotto espone un array `sizes` con le **sole taglie che hanno stock** nelle boutique
+EU (non si mostrano le quantità, solo la presenza). La regola, ricavata dagli Excel sorgente:
+
+- **Donna** — foglio `FW26`, colonna **O** `SOH QTY STORE AVAILABLE`: una taglia è
+  disponibile se il valore è **> 0** (la colonna non è mai vuota: `0` = niente stock).
+- **Uomo** — foglio `RECAP`, solo `LINE = "M RTW"`, riga **`SOH + TRANSIT`**, colonne
+  taglie **N…CK**: una taglia è disponibile se la cella è **> 0**.
+
+I prodotti senza alcuna taglia disponibile non entrano nel catalogo.
 
 ## Immagini prodotto
 

@@ -43,34 +43,62 @@
   var PAGE = 60; // prodotti per batch
 
   // Stato filtri
-  var state = { gender: "all", category: "" };
+  var state = { gender: "all", category: "", sizes: [] };
   var filtered = [];
   var rendered = 0;
 
   // Elementi
   var grid = document.getElementById("grid");
-  var catEl = document.getElementById("categoryFilter");
   var genderEl = document.getElementById("genderFilter");
   var resultsInfo = document.getElementById("resultsInfo");
   var emptyEl = document.getElementById("empty");
   var sentinel = document.getElementById("sentinel");
+
+  // Drawer "Filter by"
+  var filterTrigger = document.getElementById("filterTrigger");
+  var drawer = document.getElementById("filterDrawer");
+  var drawerOverlay = document.getElementById("drawerOverlay");
+  var drawerClose = document.getElementById("drawerClose");
+  var drawerClear = document.getElementById("drawerClear");
+  var drawerApply = document.getElementById("drawerApply");
+  var categoryOptions = document.getElementById("categoryOptions");
+  var sizeOptions = document.getElementById("sizeOptions");
+  var PLACEHOLDER_CAT = "All Categories";
+  var currentSizes = [];   // taglie disponibili per il gender selezionato (dinamiche)
+
+  // Selezione temporanea nel drawer (applicata solo con "Apply")
+  var draft = { category: "", sizes: [] };
+
+  /* ---- Ordinamento taglie: numeriche crescenti, poi lettere note, poi altro ---- */
+  var LETTER_ORDER = ["XXS", "XS", "S", "S/M", "M", "M/L", "L", "L/X", "L/XL",
+                      "XL", "XXL", "2XL", "3XL", "XXXL", "UNI", "TU", "OS"];
+  function sizeSortKey(s) {
+    s = String(s).trim();
+    var up = s.toUpperCase();
+    var m = s.match(/^0*(\d+)/);
+    if (/^0*\d+\/?$/.test(s)) return [0, parseInt(m[1], 10), 0, s];
+    var li = LETTER_ORDER.indexOf(up);
+    if (li !== -1) return [1, li, 0, s];
+    if (m) return [0, parseInt(m[1], 10), 1, s];
+    return [2, 0, 0, up];
+  }
+  function sortSizes(arr) {
+    return arr.slice().sort(function (a, b) {
+      var ka = sizeSortKey(a), kb = sizeSortKey(b);
+      for (var i = 0; i < ka.length; i++) {
+        if (ka[i] < kb[i]) return -1;
+        if (ka[i] > kb[i]) return 1;
+      }
+      return 0;
+    });
+  }
 
   function fmtPrice(p) {
     if (p === null || p === undefined || p === "") return "—";
     return "€ " + Number(p).toLocaleString("en-US");
   }
 
-  function uniqueSorted(getter) {
-    var set = {};
-    ALL.forEach(function (p) {
-      var v = getter(p);
-      if (v) set[v] = true;
-    });
-    return Object.keys(set).sort();
-  }
-
   function populateSelects() {
-    // Categorie (dipendono dal gender selezionato)
     var pool = ALL.filter(function (p) {
       return state.gender === "all" || p.gender === state.gender;
     });
@@ -78,28 +106,130 @@
     pool.forEach(function (p) {
       if (p.category) cats[p.category] = true;
     });
-    fillSelect(catEl, Object.keys(cats).sort(), "All categories", state.category);
+    buildCategoryOptions(Object.keys(cats).sort());
+    buildSizeOptions();
   }
 
-  function fillSelect(el, values, placeholder, current) {
-    el.innerHTML = "";
-    var opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = placeholder;
-    el.appendChild(opt);
-    values.forEach(function (v) {
-      var o = document.createElement("option");
-      o.value = v;
-      o.textContent = v;
-      if (v === current) o.selected = true;
-      el.appendChild(o);
+  // Taglie disponibili per il gender corrente + (eventuale) categoria selezionata
+  function computeSizes(category) {
+    var set = {};
+    ALL.forEach(function (p) {
+      if (state.gender !== "all" && p.gender !== state.gender) return;
+      if (category && p.category !== category) return;
+      (p.sizes || []).forEach(function (s) { if (s) set[s] = true; });
     });
+    return sortSizes(Object.keys(set));
+  }
+
+  function buildCategoryOptions(values) {
+    categoryOptions.innerHTML = "";
+    var all = [""].concat(values);
+    all.forEach(function (v) {
+      var li = document.createElement("li");
+      li.className = "drawer-option";
+      li.setAttribute("role", "option");
+      li.setAttribute("data-value", v);
+      li.textContent = v || PLACEHOLDER_CAT;
+      if (v === draft.category) li.classList.add("selected");
+      li.addEventListener("click", function () {
+        draft.category = v;
+        markCategorySelected();
+        buildSizeOptions();  // auto-filtra le taglie sulla categoria scelta
+      });
+      categoryOptions.appendChild(li);
+    });
+  }
+
+  function markCategorySelected() {
+    [].forEach.call(categoryOptions.children, function (li) {
+      li.classList.toggle("selected", li.getAttribute("data-value") === draft.category);
+    });
+  }
+
+  function buildSizeOptions() {
+    currentSizes = computeSizes(draft.category);
+    // rimuovi dalla selezione le taglie non piu' disponibili nella categoria scelta
+    draft.sizes = draft.sizes.filter(function (s) { return currentSizes.indexOf(s) !== -1; });
+    sizeOptions.innerHTML = "";
+    if (!currentSizes.length) {
+      var none = document.createElement("span");
+      none.className = "drawer-empty-note";
+      none.textContent = "—";
+      sizeOptions.appendChild(none);
+      return;
+    }
+    currentSizes.forEach(function (s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "size-chip";
+      b.textContent = s;
+      if (draft.sizes.indexOf(s) !== -1) b.classList.add("selected");
+      b.addEventListener("click", function () {
+        var idx = draft.sizes.indexOf(s);
+        if (idx === -1) draft.sizes.push(s); else draft.sizes.splice(idx, 1);
+        b.classList.toggle("selected");
+      });
+      sizeOptions.appendChild(b);
+    });
+  }
+
+  function openDrawer() {
+    // Sincronizza draft con lo stato applicato
+    draft.category = state.category;
+    draft.sizes = state.sizes.slice();
+    markCategorySelected();
+    buildSizeOptions();
+    drawerOverlay.hidden = false;
+    drawer.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+    filterTrigger.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+    filterTrigger.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+    setTimeout(function () { drawerOverlay.hidden = true; }, 300);
+  }
+
+  filterTrigger.addEventListener("click", openDrawer);
+  drawerClose.addEventListener("click", closeDrawer);
+  drawerOverlay.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && drawer.classList.contains("open")) closeDrawer();
+  });
+  drawerApply.addEventListener("click", function () {
+    state.category = draft.category;
+    state.sizes = draft.sizes.slice();  // filtra per taglia disponibile (match parziale)
+    updateTriggerState();
+    closeDrawer();
+    applyFilters();
+  });
+  drawerClear.addEventListener("click", function () {
+    draft.category = "";
+    draft.sizes = [];
+    markCategorySelected();
+    buildSizeOptions();
+  });
+
+  function updateTriggerState() {
+    var active = !!state.category || (state.sizes && state.sizes.length);
+    filterTrigger.classList.toggle("active", !!active);
   }
 
   function applyFilters() {
     filtered = ALL.filter(function (p) {
       if (state.gender !== "all" && p.gender !== state.gender) return false;
       if (state.category && p.category !== state.category) return false;
+      if (state.sizes && state.sizes.length) {
+        var ps = p.sizes || [];
+        var hit = false;
+        for (var i = 0; i < state.sizes.length; i++) {
+          if (ps.indexOf(state.sizes[i]) !== -1) { hit = true; break; }
+        }
+        if (!hit) return false;
+      }
       return true;
     });
 
@@ -203,6 +333,31 @@
   lbPrev.addEventListener("click", function (e) { e.stopPropagation(); showImage(lbIdx - 1); });
   lbNext.addEventListener("click", function (e) { e.stopPropagation(); showImage(lbIdx + 1); });
   lb.addEventListener("click", function (e) { if (e.target === lb) closeLightbox(); });
+
+  /* Swipe dx/sx sull'immagine (touch) */
+  var lbMain = document.querySelector(".lb-main");
+  if (lbMain) {
+    var touchX = 0, touchY = 0, touching = false;
+    var SWIPE_MIN = 40; // px minimi per considerarlo swipe
+    lbMain.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1) { touching = false; return; }
+      touching = true;
+      touchX = e.touches[0].clientX;
+      touchY = e.touches[0].clientY;
+    }, { passive: true });
+    lbMain.addEventListener("touchend", function (e) {
+      if (!touching || lbGallery.length < 2) { touching = false; return; }
+      touching = false;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - touchX;
+      var dy = t.clientY - touchY;
+      // solo swipe prevalentemente orizzontali
+      if (Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) showImage(lbIdx + 1); // swipe verso sinistra → prossima
+        else showImage(lbIdx - 1);        // swipe verso destra → precedente
+      }
+    }, { passive: true });
+  }
   document.addEventListener("keydown", function (e) {
     if (lb.hidden) return;
     if (e.key === "Escape") closeLightbox();
@@ -212,19 +367,21 @@
 
   function row(label, val) {
     if (!val) return "";
-    return "<dt>" + esc(label) + "</dt><dd>" + esc(val) + "</dd>";
+    return "<dt>" + esc(label) + ":</dt><dd>" + esc(val) + "</dd>";
   }
 
   function openLightbox(p) {
     lbGallery = (p.gallery && p.gallery.length) ? p.gallery : (p.img ? [p.img] : []);
     renderThumbs();
     showImage(0);
+    var sizes = p.sizes || [];
     lbInfo.innerHTML =
-      '<div class="lb-cat">' + esc(p.gender === "men" ? "Men" : "Women") + '</div>' +
+      '<div class="lb-cat">' + esc(p.gender === "men" ? "Man" : "Woman") + '</div>' +
       '<h2>' + esc(p.sku) + '</h2>' +
       '<dl>' +
       row("Color", p.color) +
       row("Category", p.category) +
+      row("Available sizes", sizes.join(", ")) +
       '</dl>';
     lb.hidden = false;
     document.body.style.overflow = "hidden";
@@ -235,7 +392,6 @@
   }
 
   /* Eventi filtri */
-  catEl.addEventListener("change", function () { state.category = catEl.value; applyFilters(); });
   genderEl.addEventListener("click", function (e) {
     var btn = e.target.closest(".seg");
     if (!btn) return;
@@ -243,9 +399,26 @@
     btn.classList.add("active");
     state.gender = btn.getAttribute("data-gender");
     state.category = "";
+    state.sizes = [];
+    draft.category = "";
+    draft.sizes = [];
+    updateTriggerState();
     populateSelects();
     applyFilters();
   });
+
+  /* Toolbar compatta allo scroll (il titolo scompare, resta la riga filtri) */
+  var toolbarEl = document.querySelector(".toolbar");
+  var lastScrolled = false;
+  function onScroll() {
+    var scrolled = window.pageYOffset > 40;
+    if (scrolled !== lastScrolled) {
+      toolbarEl.classList.toggle("scrolled", scrolled);
+      lastScrolled = scrolled;
+    }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
 
   /* Infinite scroll */
   if ("IntersectionObserver" in window) {
@@ -258,6 +431,11 @@
   }
 
   /* Init */
+  (function setInitialActive() {
+    var initial = genderEl.querySelector('.seg[data-gender="' + state.gender + '"]');
+    if (initial) initial.classList.add("active");
+  })();
   populateSelects();
+  updateTriggerState();
   applyFilters();
 })();
